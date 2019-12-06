@@ -55,9 +55,39 @@ class BTree {
             return true;
         }
 
-        bool remove(int k) {
-            // TODO
-            return true;
+        int height() {
+            return 0;
+        }
+
+        bool remove(int key) {
+            bool result;
+
+            if(!this->root) {
+                result = false;
+                throw runtime_error("the tree is empty");
+            }
+
+            result = this->root->remove(key);
+
+            if(!this->root->currentKeys) {//0
+                auto tmp = this->root;
+
+                if(this->root->isLeaf)
+                    this->root = nullptr;
+                else {
+                    this->root = this->root->childs.at(0);
+
+                    if( this->root->isLeaf ) {
+                        this->root = nullptr;
+                        delete this->root;
+                    }
+
+                }
+
+                delete tmp;
+            }
+
+            return result;
         }
 
         void print() {

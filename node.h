@@ -13,6 +13,7 @@ template<typename T>
 class Node {
 public:
     unsigned int degree;
+    unsigned int minKeys;
     unsigned int currentKeys; //Numbers of keys
     vector<unsigned int> keys;
     vector<Node<T> *> childs;
@@ -22,6 +23,7 @@ public:
         keys.resize(size - 1);
         childs.resize(size);
         currentKeys = 0;
+        minKeys = ceil(size/2) - 1;
     }
 
     Node<T> *search(int key) {
@@ -96,6 +98,176 @@ public:
             this->childs[i]->insertNonFull(data);
         }
     }
+
+    bool remove(int key) {
+        bool result=true;
+        auto index = getIndexOfKey(key);
+
+        if(index < this->currentKeys && this->keys.at(index) == key) {
+            if(this->isLeaf)
+                removefromLeaf(index);
+            else
+                removefromNonLeaf(index);
+        } else {
+            if(this->isLeaf) {
+                return false;
+            }
+
+            //if(!result)
+            //    throw runtime_error("can't find the key");
+
+            auto exists = index == this->currentKeys;
+
+            if(this->childs.at(index)->currentKeys < this->minKeys )
+                fill(index);
+
+            if(exists && index > this->currentKeys)
+                this->childs.at(index-1)->remove(key);
+            else
+                this->childs.at(index)->remove(key);
+        }
+
+        return result;
+    }
+
+    void fill(int index) {
+        if (index != 0 && this->childs.at(index-1)->currentKeys >= this->minKeys)
+            borrowfromPrev(index);
+        else if (index != this->currentKeys && this->childs.at(index+1)->currentKeys >= this->minKeys)
+            borrowfromNext(index);
+        else {
+            if (index != this->currentKeys)
+                merge(index);
+            else
+                merge(index-1);
+        }
+    }
+
+    void borrowfromPrev(int index) {
+        auto nodeChild = this->childs.at(index);
+        auto nodeSibling = this->childs.at(index - 1);
+
+        for(int i= nodeChild->currentKeys - 1 ; i >= 0; --i)
+            nodeChild->keys.at(i + 1) = nodeChild->keys.at(i);
+
+        if(!nodeChild->isLeaf)
+            for(int i=nodeChild->currentKeys ; i >= 0 ; --i)
+                nodeChild->childs.at(i + 1) = nodeChild->childs.at(i);
+
+        nodeChild->keys.at(0) = this->keys.at(index - 1);
+
+        if(!nodeChild->isLeaf)
+            nodeChild->childs.at(0) = nodeSibling->childs.at(nodeSibling->currentKeys );
+
+        this->keys.at(index-1) = nodeSibling->keys.at(nodeSibling->currentKeys - 1 );
+
+        nodeChild->currentKeys++;
+        nodeSibling->currentKeys--;
+    }
+
+    void borrowfromNext(int index) {
+        auto nodeChild = this->childs.at(index);
+        auto nodeSibling = this->childs.at(index+1);
+
+        nodeChild->keys.at( nodeChild->currentKeys ) = this->keys.at(index);
+
+        if (!nodeChild->isLeaf)
+            nodeChild->childs.at( nodeChild->currentKeys+1 ) = nodeSibling->childs.at(0);
+
+        this->keys.at(index) = nodeSibling->keys.at(0);
+
+        for(int i=1; i<nodeSibling->currentKeys; ++i)
+            nodeSibling->keys.at(i-1) = nodeSibling->keys.at(i);
+
+        if(!nodeSibling->isLeaf)
+            for(int i=1; i<=nodeSibling->currentKeys ; ++i)
+                nodeSibling->childs.at(i-1) = nodeSibling->childs.at(i);
+
+        nodeChild->currentKeys = nodeChild->currentKeys + 1;
+        nodeSibling->currentKeys = nodeSibling->currentKeys - 1;
+    }
+
+    void removefromLeaf(int index) {
+        for(int i=index+1; i < this->currentKeys ; ++i)
+            this->keys.at(i-1) = this->keys.at(i);
+
+        --this->currentKeys;
+    }
+
+    void removefromNonLeaf(int index) {
+        auto key = this->keys.at(index);
+
+        if ( this->childs.at(index)->currentKeys >= this->minKeys) {
+
+            auto previous = this->getPreviousKey(index);
+            this->keys.at(index) = previous;
+
+            this->childs.at(index)->remove(previous);
+
+        } else if ( this->childs.at(index+1)->currentKeys >= this->minKeys) {
+
+            auto next = this->getNextKey(index);
+            this->keys.at(index) = next;
+
+            this->childs.at(index+1)->remove(next);
+        } else {
+            merge(index);
+            this->childs.at(index)->remove(key);
+        }
+    }
+
+    void merge(int index) {
+        auto child = this->childs.at(index);
+        auto sibling = this->childs.at(index+1);
+
+        child->keys.at(this->minKeys-1) = this->keys.at(index);
+
+        for(int i=0; i<sibling->currentKeys; ++i)
+            child->keys.at(i+this->minKeys) = sibling->keys.at(i);
+
+        if(!child->isLeaf)
+            for(int i=0; i<sibling->currentKeys;++i)
+                child->childs.at(i+this->minKeys) = sibling->childs.at(i);
+
+        for(int i=index+1; i < this->currentKeys ; ++i)
+            this->keys.at(i-1) = this->keys.at(i);
+
+        for(int i=index+2; i < this->currentKeys ; ++i)
+            this->childs.at(i-1) = this->childs.at(i);
+
+        child->currentKeys = child->currentKeys + sibling->currentKeys + 1;
+        --this->currentKeys;
+
+        delete sibling;
+    }
+
+    T getPreviousKey(int index) {
+        auto current = this->childs.at(index);
+
+        while(!current->isLeaf)
+            current = current->childs.at(current->currentKeys);
+
+        return current->keys.at( current->currentKeys-1);
+    }
+
+    T getNextKey(int index) {
+        auto current = this->childs.at(index+1);
+
+        while(!current->isLeaf)
+            current = current->childs.at(0);
+
+        return current->keys.at(0);
+    }
+
+    int getIndexOfKey(int key) {
+        int index=0;
+
+        while(index < this->currentKeys && this->keys.at(index) < key )
+            ++index;
+
+        return index;
+    }
+
 
     void inOrderPrinting() {
         int index;

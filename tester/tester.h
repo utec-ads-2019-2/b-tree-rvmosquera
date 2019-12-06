@@ -8,7 +8,8 @@
 #include <algorithm>   
 
 #include "../mocker/mocker.h"
-#include "../matrix.h"
+#include <algorithm>
+#include "btree.h"
 
 using namespace std;
 
@@ -29,18 +30,9 @@ using namespace std;
 
 class Tester {
     private:
-        template <typename T>
-        static void testMatrix(unsigned int, unsigned int);
-
-        template <typename T>
-        static T** buildMatrix(unsigned int, unsigned int);
-
-        template <typename T>
-        static Matrix<T> setMatrix(T **&, unsigned int, unsigned int);
 
     public:
-        static void execute();
-        static void customMatrixMult();
+        static void testInsertion();
 };
 
 #endif

@@ -33,6 +33,7 @@ class Tester {
 
     public:
         static void testInsertion();
+        static void testDeletion();
 };
 
 #endif

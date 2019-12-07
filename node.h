@@ -72,6 +72,9 @@ public:
 
         this->keys.at(pos) = pNode->keys.at(middle);
         ++this->currentKeys;
+        //clear the rest of pNode
+        for(int j=middle ; j < pNode->degree-1 ;++j)
+            pNode->keys.at(j) = 0;
     }
 
     void insertNonFull(T data) { //according to Cormem
@@ -191,6 +194,10 @@ public:
         for(int i=index+1; i < this->currentKeys ; ++i)
             this->keys.at(i-1) = this->keys.at(i);
 
+        //clear the rest of keys
+        for(int j=this->currentKeys-1 ; j < this->degree - 1;++j)
+            this->keys.at(j) = 0;
+
         --this->currentKeys;
     }
 
@@ -238,6 +245,10 @@ public:
         child->currentKeys = child->currentKeys + sibling->currentKeys + 1;
         --this->currentKeys;
 
+        //clear the rest of keys
+        for(int j=this->currentKeys ; j < this->degree - 1;++j)
+            this->keys.at(j) = 0;
+
         delete sibling;
     }
 
@@ -256,7 +267,10 @@ public:
         while(!current->isLeaf)
             current = current->childs.at(0);
 
-        return current->keys.at(0);
+        if (!current->keys.empty())
+            return current->keys.at(0);
+        else
+            return 0;
     }
 
     int getIndexOfKey(int key) {
@@ -287,6 +301,9 @@ public:
      * an implement this function
      */
      void killSelf() {
+         if (this->childs.empty())
+             return;
+
          for(auto eleForDel : this->childs) {
              if(eleForDel)
                  eleForDel->killSelf();
